@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Canteen Connect - Static Crowd Monitor</title>
+    <style>
+      :root { --bg:#0f172a; --card:#111827; --muted:#94a3b8; --ok:#22c55e; --warn:#eab308; --bad:#ef4444; --text:#e5e7eb; --border:#1f2937; }
+      html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial,"Noto Sans","Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"}
+      .container{max-width:900px;margin:0 auto;padding:24px}
+      .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px}
+      .title{font-size:22px;font-weight:700;margin:0 0 8px}
+      .muted{color:var(--muted);font-size:14px}
+      .row{display:flex;gap:16px;flex-wrap:wrap}
+      .box{flex:1 1 260px}
+      .gauge-wrap{height:16px;background:#0b1220;border:1px solid var(--border);border-radius:999px;overflow:hidden}
+      .gauge{height:100%;width:0;background:var(--ok);transition:width .4s ease}
+      .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid var(--border);font-weight:600}
+      .pill.ok{color:var(--ok);background:rgba(34,197,94,.1)}
+      .pill.busy{color:var(--warn);background:rgba(234,179,8,.1)}
+      .pill.crowded{color:var(--bad);background:rgba(239,68,68,.08)}
+      .count{font-size:40px;font-weight:800}
+      .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+      .btn{background:#2563eb;border:none;color:#fff;padding:10px 14px;border-radius:10px;font-weight:600;cursor:pointer}
+      .btn:disabled{opacity:.6;cursor:not-allowed}
+      .btn.secondary{background:#334155}
+      .error{color:#fecaca}
+      a{color:#60a5fa;text-decoration:none}
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="card" style="margin-bottom:16px">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <div>
+            <h1 class="title">Canteen Connect — Static Crowd Monitor</h1>
+            <div class="muted">Reads API data directly without React. Open this file or host it statically.</div>
+          </div>
+          <div class="muted">API: <code id="apiBase">http://localhost:5000</code></div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card box">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div style="font-weight:700">Current Crowd</div>
+            <span id="levelPill" class="pill ok">Not Busy</span>
+          </div>
+          <div class="gauge-wrap"><div id="gauge" class="gauge"></div></div>
+          <div style="display:flex;justify-content:space-between;color:#94a3b8;font-size:12px;margin-top:6px">
+            <span>0</span><span>50</span><span>100</span>
+          </div>
+          <div style="margin-top:12px">
+            <div class="count" id="personCount">0</div>
+            <div class="muted">people currently in canteen</div>
+          </div>
+          <div class="muted" style="margin-top:8px">Last updated: <span id="timestamp">—</span></div>
+          <div id="error" class="error" style="margin-top:8px;display:none"></div>
+        </div>
+
+        <div class="card box">
+          <div style="font-weight:700;margin-bottom:8px">Actions</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="refreshBtn" class="btn">Refresh</button>
+            <button id="autoBtn" class="btn secondary">Auto Refresh: Off</button>
+            <button id="seedBtn" class="btn secondary">Seed Sample Count</button>
+          </div>
+          <div class="muted" style="margin-top:12px">If you opened this file directly (file://...), seeding still works because the API allows CORS. Ensure the backend is running.</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div style="font-weight:700;margin-bottom:6px">Tips</div>
+        <ul class="muted" style="margin:0;padding-left:18px">
+          <li>Start API first: <code>cd canteen-connect/server && npm run dev</code></li>
+          <li>Run the AI script for live updates, or use the Seed button here.</li>
+          <li>For the full UI, start the React app and visit <a href="http://localhost:3000" target="_blank">http://localhost:3000</a>.</li>
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE = 'http://localhost:5000';
+      const LATEST_URL = API_BASE + '/api/crowd/latest';
+      const REPORT_URL = API_BASE + '/api/crowd/report';
+      const maxCapacity = 100;
+
+      const personCountEl = document.getElementById('personCount');
+      const timestampEl = document.getElementById('timestamp');
+      const gaugeEl = document.getElementById('gauge');
+      const levelPillEl = document.getElementById('levelPill');
+      const errorEl = document.getElementById('error');
+      const refreshBtn = document.getElementById('refreshBtn');
+      const autoBtn = document.getElementById('autoBtn');
+      const seedBtn = document.getElementById('seedBtn');
+
+      let autoTimer = null;
+
+      function setLevel(level){
+        levelPillEl.textContent = level;
+        levelPillEl.className = 'pill ' + (level === 'Crowded' ? 'crowded' : level === 'Busy' ? 'busy' : 'ok');
+        gaugeEl.style.background = level === 'Crowded' ? 'var(--bad)' : level === 'Busy' ? 'var(--warn)' : 'var(--ok)';
+      }
+
+      async function fetchLatest(){
+        try {
+          errorEl.style.display = 'none';
+          const resp = await fetch(LATEST_URL, { cache: 'no-store' });
+          if (!resp.ok) throw new Error('Status ' + resp.status);
+          const data = await resp.json();
+          const count = Number(data.personCount || 0);
+          personCountEl.textContent = count;
+          const pct = Math.max(0, Math.min(100, (count / maxCapacity) * 100));
+          gaugeEl.style.width = pct + '%';
+          setLevel(data.crowdLevel || (count > 50 ? 'Crowded' : count > 25 ? 'Busy' : 'Not Busy'));
+          if (data.timestamp){
+            const dt = new Date(data.timestamp);
+            timestampEl.textContent = isNaN(dt.getTime()) ? '—' : dt.toLocaleTimeString();
+          } else {
+            timestampEl.textContent = '—';
+          }
+        } catch (e){
+          errorEl.textContent = 'Failed to load latest crowd data. Is the backend running at ' + API_BASE + '? (' + e.message + ')';
+          errorEl.style.display = 'block';
+        }
+      }
+
+      async function seedSample(){
+        try {
+          errorEl.style.display = 'none';
+          const sample = { personCount: Math.floor(Math.random() * 60) + 5 };
+          const resp = await fetch(REPORT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sample)
+          });
+          if (!resp.ok) throw new Error('Status ' + resp.status);
+          await fetchLatest();
+        } catch (e){
+          errorEl.textContent = 'Failed to seed sample data. (' + e.message + ')';
+          errorEl.style.display = 'block';
+        }
+      }
+
+      function toggleAuto(){
+        if (autoTimer){
+          clearInterval(autoTimer); autoTimer = null; autoBtn.textContent = 'Auto Refresh: Off';
+        } else {
+          autoTimer = setInterval(fetchLatest, 10000); autoBtn.textContent = 'Auto Refresh: On';
+        }
+      }
+
+      refreshBtn.addEventListener('click', fetchLatest);
+      autoBtn.addEventListener('click', toggleAuto);
+      seedBtn.addEventListener('click', seedSample);
+
+      // Initial load
+      fetchLatest();
+    </script>
+  </body>
+  </html>
+
+

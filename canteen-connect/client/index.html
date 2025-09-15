@@ -6,9 +6,128 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Canteen Connect - AI-Powered Canteen Management</title>
     <meta name="description" content="Digital canteen menu with real-time crowd monitoring and user ratings" />
+    <style>
+      /* Fallback static styles (used when opening this file directly without Vite/React) */
+      :root { --bg:#0f172a; --card:#111827; --muted:#94a3b8; --ok:#22c55e; --warn:#eab308; --bad:#ef4444; --text:#e5e7eb; --border:#1f2937; }
+      html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial,"Noto Sans"}
+      .fallback-container{max-width:900px;margin:0 auto;padding:24px}
+      .fallback-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px}
+      .fallback-title{font-size:22px;font-weight:700;margin:0 0 8px}
+      .fallback-muted{color:var(--muted);font-size:14px}
+      .gauge-wrap{height:16px;background:#0b1220;border:1px solid var(--border);border-radius:999px;overflow:hidden}
+      .gauge{height:100%;width:0;background:var(--ok);transition:width .4s ease}
+      .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid var(--border);font-weight:600}
+      .pill.ok{color:var(--ok);background:rgba(34,197,94,.1)}
+      .pill.busy{color:var(--warn);background:rgba(234,179,8,.1)}
+      .pill.crowded{color:var(--bad);background:rgba(239,68,68,.08)}
+      .count{font-size:40px;font-weight:800}
+      .btn{background:#2563eb;border:none;color:#fff;padding:10px 14px;border-radius:10px;font-weight:600;cursor:pointer}
+      .btn.secondary{background:#334155}
+      .error{color:#fecaca}
+      .fallback-hidden{display:none}
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Fallback static UI (visible when React is not loaded) -->
+      <div id="fallback" class="fallback-container">
+        <div class="fallback-card" style="margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <h1 class="fallback-title">Canteen Connect — Crowd Monitor</h1>
+              <div class="fallback-muted">Static fallback. For full UI, run the React dev server.</div>
+            </div>
+            <div class="fallback-muted">API: <code>http://localhost:5000</code></div>
+          </div>
+        </div>
+
+        <div class="fallback-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div style="font-weight:700">Current Crowd</div>
+            <span id="fbLevel" class="pill ok">Not Busy</span>
+          </div>
+          <div class="gauge-wrap"><div id="fbGauge" class="gauge"></div></div>
+          <div style="display:flex;justify-content:space-between;color:#94a3b8;font-size:12px;margin-top:6px">
+            <span>0</span><span>50</span><span>100</span>
+          </div>
+          <div style="margin-top:12px">
+            <div class="count" id="fbCount">0</div>
+            <div class="fallback-muted">people currently in canteen</div>
+          </div>
+          <div class="fallback-muted" style="margin-top:8px">Last updated: <span id="fbTime">—</span></div>
+          <div id="fbErr" class="error" style="margin-top:8px;display:none"></div>
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+            <button id="fbRefresh" class="btn">Refresh</button>
+            <button id="fbSeed" class="btn secondary">Seed Sample</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Minimal static fallback: runs when opening index.html directly (file://) or if Vite bundle fails to load
+      (function(){
+        const API = 'http://localhost:5000';
+        const latestUrl = API + '/api/crowd/latest';
+        const reportUrl = API + '/api/crowd/report';
+        const maxCap = 100;
+
+        const el = (id) => document.getElementById(id);
+        const countEl = el('fbCount');
+        const timeEl = el('fbTime');
+        const gaugeEl = el('fbGauge');
+        const levelEl = el('fbLevel');
+        const errEl = el('fbErr');
+        const refreshBtn = el('fbRefresh');
+        const seedBtn = el('fbSeed');
+
+        function setLevel(level){
+          levelEl.textContent = level;
+          levelEl.className = 'pill ' + (level === 'Crowded' ? 'crowded' : level === 'Busy' ? 'busy' : 'ok');
+          gaugeEl.style.background = level === 'Crowded' ? 'var(--bad)' : level === 'Busy' ? 'var(--warn)' : 'var(--ok)';
+        }
+
+        async function fetchLatest(){
+          try{
+            errEl.style.display = 'none';
+            const r = await fetch(latestUrl, { cache: 'no-store' });
+            if(!r.ok) throw new Error('Status ' + r.status);
+            const d = await r.json();
+            const n = Number(d.personCount||0);
+            countEl.textContent = n;
+            gaugeEl.style.width = Math.min(100, Math.max(0, (n/maxCap)*100)) + '%';
+            setLevel(d.crowdLevel || (n>50?'Crowded':n>25?'Busy':'Not Busy'));
+            if(d.timestamp){
+              const dt = new Date(d.timestamp);
+              timeEl.textContent = isNaN(dt.getTime()) ? '—' : dt.toLocaleTimeString();
+            } else {
+              timeEl.textContent = '—';
+            }
+          }catch(e){
+            errEl.textContent = 'Failed to load latest crowd data. Is the backend running at ' + API + '? ('+ e.message +')';
+            errEl.style.display = 'block';
+          }
+        }
+
+        async function seed(){
+          try{
+            errEl.style.display = 'none';
+            const payload = { personCount: Math.floor(Math.random()*60)+5 };
+            const r = await fetch(reportUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            if(!r.ok) throw new Error('Status ' + r.status);
+            await fetchLatest();
+          }catch(e){
+            errEl.textContent = 'Failed to seed sample data. ('+ e.message +')';
+            errEl.style.display = 'block';
+          }
+        }
+
+        if(refreshBtn && seedBtn){
+          refreshBtn.addEventListener('click', fetchLatest);
+          seedBtn.addEventListener('click', seed);
+          fetchLatest();
+        }
+      })();
+    </script>
   </body>
 </html>

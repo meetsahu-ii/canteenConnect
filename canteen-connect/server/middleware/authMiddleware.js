@@ -11,7 +11,7 @@ const authenticateToken = async (req, res, next) => {
             return res.status(401).json({ message: 'Access token required' });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-insecure-jwt-secret');
         const user = await User.findById(decoded.userId);
         
         if (!user) {
