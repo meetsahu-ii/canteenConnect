@@ -246,3 +246,28 @@
 2025-09-15 20:06:56,866 - INFO - Detection loop interrupted by user
 2025-09-15 20:06:56,866 - INFO - Cleaning up resources...
 2025-09-15 20:06:57,182 - INFO - Cleanup completed
+2025-09-17 01:37:11,218 - INFO - Loading YOLO model...
+2025-09-17 01:37:11,450 - INFO - YOLO model loaded successfully
+2025-09-17 01:37:19,419 - INFO - Webcam initialized successfully
+2025-09-17 01:37:19,419 - INFO - Starting crowd detection loop...
+2025-09-17 01:37:19,419 - INFO - Detection interval: 15 seconds
+2025-09-17 01:37:19,421 - INFO - API endpoint: http://localhost:5000/api/crowd/report
+2025-09-17 01:37:23,251 - INFO - Detection: 1 people - Level: Not Busy
+2025-09-17 01:37:27,310 - ERROR - Failed to send data to API: HTTPConnectionPool(host='localhost', port=5000): Max retries exceeded with url: /api/crowd/report (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x00000154B741E6D0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))
+2025-09-17 01:37:27,312 - WARNING - Failed to send data, will retry on next cycle
+2025-09-17 01:37:28,754 - INFO - Detection: 1 people - Level: Not Busy
+2025-09-17 01:37:32,838 - ERROR - Failed to send data to API: HTTPConnectionPool(host='localhost', port=5000): Max retries exceeded with url: /api/crowd/report (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x00000154B760FB50>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))
+2025-09-17 01:37:32,839 - WARNING - Failed to send data, will retry on next cycle
+2025-09-17 01:37:33,972 - INFO - Detection: 1 people - Level: Not Busy
+2025-09-17 01:37:38,052 - ERROR - Failed to send data to API: HTTPConnectionPool(host='localhost', port=5000): Max retries exceeded with url: /api/crowd/report (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x00000154B761E9D0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))
+2025-09-17 01:37:38,052 - WARNING - Failed to send data, will retry on next cycle
+2025-09-17 01:37:39,383 - INFO - Detection: 1 people - Level: Not Busy
+2025-09-17 01:37:43,435 - ERROR - Failed to send data to API: HTTPConnectionPool(host='localhost', port=5000): Max retries exceeded with url: /api/crowd/report (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x00000154B76291D0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))
+2025-09-17 01:37:43,435 - WARNING - Failed to send data, will retry on next cycle
+2025-09-17 01:37:44,565 - INFO - Detection: 1 people - Level: Not Busy
+2025-09-17 01:37:48,658 - ERROR - Failed to send data to API: HTTPConnectionPool(host='localhost', port=5000): Max retries exceeded with url: /api/crowd/report (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x00000154B761E090>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))
+2025-09-17 01:37:48,658 - WARNING - Failed to send data, will retry on next cycle
+2025-09-17 01:37:49,827 - INFO - Detection: 1 people - Level: Not Busy
+2025-09-17 01:37:53,917 - ERROR - Failed to send data to API: HTTPConnectionPool(host='localhost', port=5000): Max retries exceeded with url: /api/crowd/report (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x00000154A6FFB950>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))
+2025-09-17 01:37:53,917 - WARNING - Failed to send data, will retry on next cycle
+2025-09-17 01:37:55,122 - INFO - Detection: 1 people - Level: Not Busy
