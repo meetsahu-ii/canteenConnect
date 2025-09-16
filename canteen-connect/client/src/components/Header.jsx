@@ -1,16 +1,50 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, User, Menu } from 'lucide-react';
+import { LogOut, User, Menu as MenuIcon, Users } from 'lucide-react';
+import axios from 'axios';
 
 const Header = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [crowd, setCrowd] = useState(null);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  useEffect(() => {
+    const fetchCrowd = async () => {
+      try {
+        const res = await axios.get('/api/crowd/latest');
+        setCrowd(res.data);
+      } catch (e) {
+        // ignore
+      }
+    };
+    fetchCrowd();
+    const id = setInterval(fetchCrowd, 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  const crowdBadge = crowd ? (
+    <span
+      className={`ml-2 text-xs px-2 py-1 rounded-full border ${
+        crowd.crowdLevel === 'Crowded'
+          ? 'bg-red-50 text-red-600 border-red-200'
+          : crowd.crowdLevel === 'Busy'
+          ? 'bg-yellow-50 text-yellow-600 border-yellow-200'
+          : 'bg-green-50 text-green-600 border-green-200'
+      }`}
+      title={`${crowd.personCount} people`}
+    >
+      <span className="inline-flex items-center gap-1">
+        <Users className="w-3 h-3" />
+        {crowd.crowdLevel}
+      </span>
+    </span>
+  ) : null;
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -34,9 +68,10 @@ const Header = () => {
               </Link>
               <Link 
                 to="/menu" 
-                className="text-gray-600 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                className="text-gray-600 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors inline-flex items-center"
               >
                 Menu
+                {crowdBadge}
               </Link>
             </nav>
           </div>

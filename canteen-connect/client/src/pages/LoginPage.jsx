@@ -39,7 +39,7 @@ const LoginPage = () => {
       }
 
       if (result.success) {
-        navigate('/');
+        navigate('/menu');
       } else {
         setError(result.message);
       }
